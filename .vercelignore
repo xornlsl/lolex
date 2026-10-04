@@ -1,0 +1,14 @@
+.env
+.env.*
+.git
+.codex
+.aws
+node_modules
+dist
+supabase
+docs
+tests
+*.rofl
+*.dump
+*.backup
+backups
