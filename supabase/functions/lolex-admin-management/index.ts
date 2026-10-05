@@ -1,4 +1,4 @@
-import { withSupabase } from "jsr:@supabase/server@^1";
+import { withSupabase } from "npm:@supabase/server@^1";
 export default { fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
   const userId = ctx.userClaims?.sub ?? ctx.userClaims?.user_id ?? ctx.userClaims?.id;
   if (!userId) return Response.json({ error: "로그인이 필요합니다." }, { status: 401 });
@@ -20,9 +20,24 @@ export default { fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
     if (body.action === "kick") {
       if (body.user_id === userId) return Response.json({ error: "자기 자신은 강퇴할 수 없습니다." }, { status: 403 });
       if (me.role === "staff" && target.role !== "member") return Response.json({ error: "STAFF는 MEMBER만 강퇴할 수 있습니다." }, { status: 403 });
-      const { error } = await ctx.supabaseAdmin.auth.admin.deleteUser(body.user_id);
-      if (error) return Response.json({ error: "회원 삭제에 실패했습니다. 연결된 경기 기록을 확인해주세요." }, { status: 409 });
-      return Response.json({ success: true });
+      if (target.status === "pending") {
+        const { error } = await ctx.supabaseAdmin.auth.admin.deleteUser(body.user_id);
+        if (error) return Response.json({ error: "가입 신청 거절에 실패했습니다." }, { status: 409 });
+        return Response.json({ success: true, action: "rejected" });
+      }
+      if (target.status !== "approved") return Response.json({ error: "이미 강퇴되었거나 처리할 수 없는 회원입니다." }, { status: 409 });
+      const { data: activeMatch, error: activeError } = await ctx.supabaseAdmin.from("match_players")
+        .select("match_id,matches!inner(status)").eq("user_id", body.user_id)
+        .in("matches.status", ["position_discussion","matched","in_progress"]).limit(1).maybeSingle();
+      if (activeError) throw activeError;
+      if (activeMatch) return Response.json({ error: "진행 중인 매칭에 참가한 회원은 강퇴할 수 없습니다. 매칭을 먼저 종료하거나 취소해주세요." }, { status: 409 });
+      const { error: statusError } = await ctx.supabaseAdmin.from("profiles").update({ status: "suspended" }).eq("user_id", body.user_id);
+      if (statusError) throw statusError;
+      const { error: queueError } = await ctx.supabaseAdmin.from("match_queue").delete().eq("user_id", body.user_id);
+      if (queueError) throw queueError;
+      const { error: banError } = await ctx.supabaseAdmin.auth.admin.updateUserById(body.user_id, { ban_duration: "876000h" });
+      if (banError) console.error("Auth ban failed after profile suspension", banError.code || "unknown");
+      return Response.json({ success: true, action: "suspended", history_preserved: true });
     }
     if (body.action === "promote" && (me.role !== "superadmin" || target.role !== "member" || target.status !== "approved")) {
       return Response.json({ error: "SUPERADMIN만 승인된 MEMBER를 STAFF로 승격할 수 있습니다." }, { status: 403 });

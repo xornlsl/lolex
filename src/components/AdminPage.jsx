@@ -20,7 +20,9 @@ export default function AdminPage({ user, onBack, onOpenSheet }) {
 
   async function act(member, action) {
     if (busy) return
-    if (action === 'kick' && !window.confirm(`${member.real_name} (${member.username}) 님을 ${member.status === 'pending' ? '가입 거절' : '강퇴'}하시겠습니까?`)) return
+    if (action === 'kick' && !window.confirm(member.status === 'pending'
+      ? `${member.real_name} (${member.username}) 님의 가입 신청을 거절하시겠습니까?`
+      : `${member.real_name} (${member.username}) 님을 강퇴하시겠습니까?\n과거 경기 기록은 보존되고 계정 이용이 차단됩니다.`)) return
     setBusy(true)
     setError('')
     try {
