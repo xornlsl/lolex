@@ -7,6 +7,7 @@ import MostChampions from './components/MostChampions'
 import MatchScreenshotPreview from './components/MatchScreenshotPreview'
 import MatchReplayReview from './components/MatchReplayReview'
 import MatchHistoryTeams from './components/MatchHistoryTeams'
+import { apiRequest } from './lib/api'
 import { LeagueUploadPage, LeagueApplicationsPage } from './components/LeaguePages'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -36,6 +37,8 @@ const [memberError, setMemberError] = useState('')
 const [memberSearched, setMemberSearched] = useState(false)
 const [queueData, setQueueData] = useState(null)
 const [queueLoading, setQueueLoading] = useState(false)
+const [matchCancelling, setMatchCancelling] = useState(false)
+const activeMatchId = queueData?.active_match?.id
 const [queueError, setQueueError] = useState('')
 const [queuePrimary, setQueuePrimary] = useState('')
 const [queueSecondary, setQueueSecondary] = useState('')
@@ -352,7 +355,7 @@ const openQueue = async () => {
     }
 
     setQueueData(data)
-    if (data.active_match?.status === 'matched') {
+    if (['matched', 'in_progress'].includes(data.active_match?.status)) {
   setPage('match')
   return
 }
@@ -390,6 +393,35 @@ useEffect(() => {
     clearInterval(interval)
   }
 }, [page])
+// Other participants also leave the match screen once this match is cancelled.
+// Do not call openQueue here: it changes pages and would discard review drafts.
+useEffect(() => {
+  if (page !== 'match' || !activeMatchId || matchCancelling || queueLoading) return
+  const controller = new AbortController()
+  let timer
+  const checkMatch = async () => {
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/lolex-queue`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('lolex_access_token')}`, apikey: supabaseKey },
+        signal: controller.signal,
+      })
+      const data = await response.json()
+      if (controller.signal.aborted) return
+      if (response.ok && data.success && String(data.active_match?.id) !== String(activeMatchId)) {
+        setQueueData(data)
+        setPositionAssignments({})
+        setQueueError('')
+        setPage(data.active_match ? 'match' : 'queue')
+        return
+      }
+    } catch {
+      // Keep unsaved review data during temporary connection failures.
+    }
+    if (!controller.signal.aborted) timer = setTimeout(checkMatch, 10000)
+  }
+  timer = setTimeout(checkMatch, 10000)
+  return () => { controller.abort(); clearTimeout(timer) }
+}, [page, activeMatchId, matchCancelling, queueLoading])
 const joinQueue = async () => {
   if (!queuePrimary || !queueSecondary) {
     setQueueError('주 포지션과 부 포지션을 모두 선택해주세요.')
@@ -507,6 +539,25 @@ const leaveQueue = async () => {
     )
   } finally {
     setQueueLoading(false)
+  }
+}
+const cancelActiveMatch = async () => {
+  const matchId = queueData?.active_match?.id
+  if (!matchId || matchCancelling || queueLoading) return
+  if (!window.confirm('이 매칭을 전체 취소할까요?\n10명 모두의 매칭이 해제되며 다시 신청해야 합니다.\n저장하지 않은 검수 내용은 사라지고, 전적과 레이팅은 변경되지 않습니다.')) return
+  setMatchCancelling(true)
+  setQueueError('')
+  try {
+    await apiRequest('lolex-match-cancel', { method: 'POST', body: { match_id: matchId } })
+    setQueueData(null)
+    setPositionAssignments({})
+    setQueuePrimary('')
+    setQueueSecondary('')
+    await openQueue()
+  } catch (err) {
+    setQueueError(err.message || '매칭 취소에 실패했습니다. 다시 시도해주세요.')
+  } finally {
+    setMatchCancelling(false)
   }
 }
 const confirmMatchResult = async ({ winner, seriesOutcome, games }) => {
@@ -885,6 +936,14 @@ const confirmPositionAssignments = async () => {
 )}
 
 <section className="queue-panel">
+  <div className="match-cancel-bar">
+    <div><strong>매칭 관리</strong><p>취소하면 10명 모두의 매칭이 해제됩니다. 다시 참여하려면 매칭을 신청해주세요.</p></div>
+    <button type="button" className="queue-cancel-button" onClick={cancelActiveMatch} disabled={matchCancelling || queueLoading}>
+      {matchCancelling ? '매칭 취소 중…' : '매칭 취소'}
+    </button>
+  </div>
+  {queueError && <p className="login-error" role="alert">{queueError}</p>}
+  <fieldset className="match-content" disabled={matchCancelling}>
   {queueData?.active_match?.status === 'position_discussion' && (
   <div className="position-discussion">
     <div className="position-discussion-list">
@@ -1050,11 +1109,11 @@ const confirmPositionAssignments = async () => {
     <details className="replay-fallback"><summary>캡처로 등록하기 (보조 기능)</summary>
     <MatchScreenshotPreview onConfirm={confirmMatchResult} busy={queueLoading} />
     </details>
-    {queueError && <p className="login-error" role="alert">{queueError}</p>}
     <p>경기 결과 확정</p>
 
   </div>
 )}
+</fieldset>
 </section>
       </main>
     </div>

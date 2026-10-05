@@ -1769,6 +1769,14 @@ input, textarea, select { background:rgba(7,16,45,.72); border:1px solid rgba(12
   .app .dashboard-page:has(.dashboard-grid) .welcome-panel { position: relative; }
 }
 
+.match-cancel-bar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #d7c8a9; }
+.match-cancel-bar p { margin: 6px 0 0; line-height: 1.6; font-size: .9rem; }
+.match-cancel-bar .queue-cancel-button { width: auto; margin: 0; flex-shrink: 0; }
+.match-content { border: 0; margin: 0; padding: 0; min-width: 0; }
+@media (max-width: 600px) {
+  .match-cancel-bar { align-items: stretch; flex-direction: column; }
+}
+
 /* Staff roster and member management share the pearl-and-gold theme. */
 .admin-page > .record-panel,
 .member-sheet-page > .record-panel { margin-top: 22px; }
