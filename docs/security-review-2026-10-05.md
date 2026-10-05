@@ -15,12 +15,11 @@
 
 ## 남은 Auth 설정 및 공개 전 확인
 
-- 공개 Auth settings에서 `disable_signup=false`, `mailer_autoconfirm=true`, 익명 로그인 비활성 확인.
-  현재 홈페이지 가입은 lolex-signup이 명단 검증 후 admin.createUser를 사용한다.
-  일반 `/auth/v1/signup` 경로는 별도이므로 Dashboard의 Allow new users to sign up 비활성화를 검토·적용하고 홈페이지 가입 회귀 테스트 필요.
+- 공개 Auth settings에서 `disable_signup=true`, `mailer_autoconfirm=true`, 익명 로그인 비활성 확인.
+  일반 `/auth/v1/signup` 직접 가입은 차단했고 홈페이지 가입은 lolex-signup의 명단 검증 후 admin.createUser 경로를 사용한다. 홈페이지 가입 회귀 테스트 필요.
 - 유출 비밀번호 차단 비활성 경고가 남음. Pro 이상 기능이므로 요금제와 옵션 확인 필요. 자동 유료 전환하지 않음.
 - Site URL/Redirect URL, 세션 수명, rate limit/CAPTCHA는 현재 MCP 도구로 전체 설정을 확인·변경하지 못함. Dashboard 확인 필요.
-- 프런트엔드는 refresh_token을 저장하지만 자동 갱신은 구현되어 있지 않음. 만료 시 재로그인/검수 내용 보존 흐름을 공개 전에 보완·검증해야 함.
+- 프런트엔드 보호 API 요청에 만료 전 토큰 갱신, 동시 갱신 합치기, 401 한 차례 재시도를 구현함. 실제 장시간 로그인 브라우저 검증은 남아 있음.
 - 실제 일반회원/관리자 로그인 상태에서 가입·승인·리그 생성/신청·매칭/결과 저장을 브라우저로 테스트해야 함.
 - 리그 이미지 업로드의 크기/파일 형식 제한, 신청 마감·정원 처리와 요청 빈도 제한도 운영 점검 대상으로 남아 있음.
 - RLS 정책 없음 INFO 3개(replay_games, replay_participants, test_match_roster)는 서버 전용 테이블의 의도된 클라이언트 접근 차단이며 공개 SELECT 정책을 추가하지 않음.

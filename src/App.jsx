@@ -7,7 +7,7 @@ import MostChampions from './components/MostChampions'
 import MatchScreenshotPreview from './components/MatchScreenshotPreview'
 import MatchReplayReview from './components/MatchReplayReview'
 import MatchHistoryTeams from './components/MatchHistoryTeams'
-import { apiRequest } from './lib/api'
+import { apiRequest, authenticatedFetch } from './lib/api'
 import { LeagueUploadPage, LeagueApplicationsPage } from './components/LeaguePages'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -55,7 +55,7 @@ const [leagueSubmitting, setLeagueSubmitting] = useState(false)
 const [appliedLeagueIds, setAppliedLeagueIds] = useState([])
 const openLeagueApplications = leagueId => { setApplicationLeagueId(leagueId); setPage('league-applications') }
 const leagueRequest = useCallback(async (endpoint, method = 'GET', body) => {
-  const response = await fetch(`${supabaseUrl}/functions/v1/${endpoint}`, {
+  const response = await authenticatedFetch(`${supabaseUrl}/functions/v1/${endpoint}`, {
     method, headers: { Authorization: `Bearer ${localStorage.getItem('lolex_access_token')}`, apikey: supabaseKey, 'Content-Type': 'application/json' },
     ...(body ? { body: JSON.stringify(body) } : {}),
   })
@@ -89,7 +89,7 @@ const manageLeague = async (method, leagueId) => {
     const accessToken = localStorage.getItem('lolex_access_token')
     if (!accessToken) return
     try {
-      const response = await fetch(`${supabaseUrl}/functions/v1/lolex-match-history`, { headers: { Authorization: `Bearer ${accessToken}`, apikey: supabaseKey } })
+      const response = await authenticatedFetch(`${supabaseUrl}/functions/v1/lolex-match-history`)
       const data = await response.json()
       if (response.ok && data.success) setMatchHistory(data.matches || [])
     } catch (err) { console.error(err) }
@@ -216,6 +216,16 @@ const manageLeague = async (method, leagueId) => {
     setPage('home')
     setProfileData(null)
   }
+  useEffect(() => {
+    const handleExpiredSession = () => {
+      setUser(null)
+      setPage('login')
+      setProfileData(null)
+      setError('로그인이 만료되었습니다. 다시 로그인해주세요.')
+    }
+    window.addEventListener('lolex:session-expired', handleExpiredSession)
+    return () => window.removeEventListener('lolex:session-expired', handleExpiredSession)
+  }, [])
   const openMyProfile = async () => {
     const accessToken =
       localStorage.getItem('lolex_access_token')
@@ -230,7 +240,7 @@ const manageLeague = async (method, leagueId) => {
     setProfileError('')
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `${supabaseUrl}/functions/v1/lolex-my-profile`,
         {
           method: 'GET',
@@ -278,7 +288,7 @@ const manageLeague = async (method, leagueId) => {
     setRankingError('')
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `${supabaseUrl}/functions/v1/lolex-members`,
         {
           method: 'GET',
@@ -333,7 +343,7 @@ const openQueue = async () => {
   setQueueError('')
 
   try {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${supabaseUrl}/functions/v1/lolex-queue`,
       {
         method: 'GET',
@@ -401,7 +411,7 @@ useEffect(() => {
   let timer
   const checkMatch = async () => {
     try {
-      const response = await fetch(`${supabaseUrl}/functions/v1/lolex-queue`, {
+      const response = await authenticatedFetch(`${supabaseUrl}/functions/v1/lolex-queue`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('lolex_access_token')}`, apikey: supabaseKey },
         signal: controller.signal,
       })
@@ -445,7 +455,7 @@ const joinQueue = async () => {
   setQueueError('')
 
   try {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${supabaseUrl}/functions/v1/lolex-queue`,
       {
         method: 'POST',
@@ -506,7 +516,7 @@ const leaveQueue = async () => {
   setQueueError('')
 
   try {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${supabaseUrl}/functions/v1/lolex-queue`,
       {
         method: 'DELETE',
@@ -591,7 +601,7 @@ const confirmMatchResult = async ({ winner, seriesOutcome, games }) => {
   setQueueError('')
 
   try {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${supabaseUrl}/functions/v1/lolex-match-result`,
       {
         method: 'POST',
@@ -660,7 +670,7 @@ const openLeague = async () => {
   setLeagueError('')
 
   try {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${supabaseUrl}/functions/v1/lolex-leagues`,
       {
         method: 'GET',
@@ -772,7 +782,7 @@ const confirmPositionAssignments = async () => {
   setQueueError('')
 
   try {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `${supabaseUrl}/functions/v1/lolex-match-positions`,
       {
         method: 'POST',
@@ -839,7 +849,7 @@ const confirmPositionAssignments = async () => {
     setMemberSearched(true)
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `${supabaseUrl}/functions/v1/lolex-members?search=${encodeURIComponent(searchText)}`,
         {
           method: 'GET',
