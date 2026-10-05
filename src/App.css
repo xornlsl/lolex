@@ -30,7 +30,7 @@ button {
 .dashboard-header { border-bottom:0; }
 .dashboard-header, .brand h1, .brand p, .welcome-panel h2, .welcome-panel p, .section-title h2, .section-title h3 { color:#18235f; }
 .brand-mark { background:linear-gradient(135deg,#6d45ff,#35bfff); border:3px solid #fff; box-shadow:0 8px 25px rgba(74,86,212,.35); }
-.welcome-panel, .record-panel, .profile-panel, .rating-panel, .queue-panel, .league-card, .dashboard-card { border:1px solid rgba(178,194,255,.8); background:linear-gradient(145deg,rgba(8,18,52,.9),rgba(19,31,72,.78)); box-shadow:0 16px 34px rgba(8,18,55,.35), inset 0 0 0 1px rgba(255,255,255,.08); color:#f4f6ff; backdrop-filter:blur(8px); }
+.record-panel, .profile-panel, .rating-panel, .queue-panel, .league-card, .dashboard-card { border:1px solid rgba(178,194,255,.8); background:linear-gradient(145deg,rgba(8,18,52,.9),rgba(19,31,72,.78)); box-shadow:0 16px 34px rgba(8,18,55,.35), inset 0 0 0 1px rgba(255,255,255,.08); color:#f4f6ff; backdrop-filter:blur(8px); }
 .dashboard-grid { gap:18px; }
 .dashboard-card { min-height:116px; color:#202866; }
 .dashboard-card strong, .dashboard-card small { color:#f5f7ff; text-shadow:0 2px 4px rgba(0,0,0,.55); }
@@ -1547,8 +1547,8 @@ input, textarea, select { background:rgba(7,16,45,.72); border:1px solid rgba(12
 .app .welcome-panel {
   border-color: rgba(232, 184, 105, .75);
   background: linear-gradient(120deg, rgba(255,255,255,.68), rgba(237,232,255,.56));
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 .app .welcome-panel h2,
 .app .welcome-panel p,
@@ -1734,6 +1734,8 @@ input, textarea, select { background:rgba(7,16,45,.72); border:1px solid rgba(12
   box-shadow: none;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  transform: translateZ(0);
   isolation: isolate;
 }
 .app .dashboard-page:has(.dashboard-grid) .welcome-panel::before {
