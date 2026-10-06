@@ -10,7 +10,7 @@ test('validates leap days and preserves spaces inside Riot IDs', () => {
   }
 })
 test('requires both Riot ID parts and rejects malformed values', () => {
-  for (const lol_nickname of ['', '별명', '#KR1', '별명#', '별명#KR 1', '별명#KR1#more', 123]) {
+  for (const lol_nickname of ['', '별명', '#KR1', '별명#', '별명#   ', '별명#아\t빠', '별명#아\n빠', '별명#KR1#more', 123]) {
     assert.throws(() => validateSheetEntry({ ...entry, lol_nickname }))
   }
   assert.throws(() => validateSheetEntry({ ...entry, real_name: ' ' }))
@@ -35,5 +35,12 @@ test('initial rating accepts only blank or integer scores 0 through 50', () => {
 })
 test('aliases use the same Riot ID format and retain display spelling', () => {
   assert.equal(validateRiotId(' 택사마택#kr1 '), '택사마택#kr1')
-  for (const value of ['닉네임', '#KR1', '이름#KR 1', 'a#b#c', null]) assert.throws(() => validateRiotId(value))
+  for (const value of ['닉네임', '#KR1', '이름#   ', '이름#아\t빠', '이름#아\n빠', 'a#b#c', null]) assert.throws(() => validateRiotId(value))
+})
+
+test('sheet registration and signup preserve spaces inside hashtags', () => {
+  for (const lol_nickname of ['힝 구#아 빠', '이름#KR 1', '힝 구#아  빠']) {
+    assert.equal(validateSheetEntry({ ...entry, lol_nickname }).lol_nickname, lol_nickname)
+    assert.equal(validateRiotId(` ${lol_nickname} `), lol_nickname)
+  }
 })

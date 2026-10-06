@@ -61,4 +61,4 @@ begin
 end;
 $$;
 revoke all on function public.finish_match_from_capture(bigint,text,text,text,jsonb) from public,anon,authenticated;
-grant execute on function public.finish_match_from_capture(bigint,text,text,text,jsonb) to service_role;
+grant execute on function public.finish_match_from_capture(bigint,text,text,text,jsonb) to service_role;;

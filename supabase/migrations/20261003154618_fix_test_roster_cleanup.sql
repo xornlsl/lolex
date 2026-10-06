@@ -16,4 +16,4 @@ begin
  using public.match_players mp
  where mp.match_id=new.id and mp.user_id=t.user_id;
  return new;
-end $$;
+end $$;;

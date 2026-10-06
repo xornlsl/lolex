@@ -35,7 +35,7 @@ export default {
       if (approvedError) throw approvedError;
       if (approved?.length) return Response.json({ error: publicErrors[0] }, { status: 409 });
       const { data: sheet, error: sheetError } = await admin.from("member_sheet").select("id")
-        .eq("real_name", entry.real_name).eq("birth_date", entry.birth_date).eq("lol_nickname", entry.lol_nickname).maybeSingle();
+        .eq("real_name", entry.real_name).eq("birth_date", entry.birth_date).eq("riot_key", entry.lol_nickname.toLowerCase()).maybeSingle();
       if (sheetError) throw sheetError;
       if (!sheet) return Response.json({ error: publicErrors[2] }, { status: 403 });
       const { data: claimed, error: claimError } = await admin.from("profiles").select("user_id").eq("member_sheet_id", sheet.id).maybeSingle();

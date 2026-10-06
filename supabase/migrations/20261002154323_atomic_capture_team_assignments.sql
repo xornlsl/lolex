@@ -120,3 +120,5 @@ grant execute on function public.finish_match_series_with_players(bigint,text,te
 
 
 
+
+;

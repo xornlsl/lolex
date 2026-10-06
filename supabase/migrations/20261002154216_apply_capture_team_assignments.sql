@@ -53,8 +53,19 @@ begin
      or (select count(*) from series_eligible_players where team='RED')<>5 then
     return jsonb_build_object('success',false,'message','최종 참가자의 팀 또는 출전 횟수가 올바르지 않습니다.');
   end if;
-  if exists(select 1 from series_eligible_players e join public.match_players mp on mp.match_id=p_match_id and mp.user_id=e.user_id where mp.team is distinct from e.team) then
-    return jsonb_build_object('success',false,'message','기존 참가자의 실제 팀이 매칭 배정과 일치하지 않습니다.');
+  update public.match_players mp
+  set team=e.team
+  from series_eligible_players e
+  where mp.match_id=p_match_id and mp.user_id=e.user_id and mp.team is distinct from e.team;
+
+  if exists(
+    select 1 from public.match_players mp
+    join series_eligible_players e on e.user_id=mp.user_id
+    where mp.match_id=p_match_id
+    group by e.team,mp.position
+    having count(*)>1
+  ) then
+    return jsonb_build_object('success',false,'message','실제 팀 기준으로 같은 포지션이 중복되었습니다. 참가자 순서와 팀 선택을 확인해주세요.');
   end if;
   if exists(select 1 from series_eligible_players e left join public.profiles p on p.user_id=e.user_id and p.status='approved' where p.user_id is null) then
     return jsonb_build_object('success',false,'message','승인되지 않은 교체 참가자가 포함되어 있습니다.');
@@ -100,3 +111,7 @@ end;
 $$;
 revoke all on function public.finish_match_series_with_players(bigint,text,text,jsonb,jsonb) from public,anon,authenticated;
 grant execute on function public.finish_match_series_with_players(bigint,text,text,jsonb,jsonb) to service_role;
+
+
+
+;

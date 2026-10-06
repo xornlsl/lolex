@@ -4,14 +4,27 @@ do $$
 declare
   a uuid:=gen_random_uuid(); b uuid:=gen_random_uuid(); c uuid:=gen_random_uuid(); d uuid:=gen_random_uuid();
   name_a text:='검증-'||a; name_c text:='검증-'||c; name_d text:='검증-'||d;
-  riot_a text:='검증-'||a||'#KR1'; riot_b text:='검증-'||b||'#KR1'; riot_c text:='검증-'||c||'#KR1'; alias_a text:='부계-'||a||'#KR1';
+  riot_a text:='CaseTest-' ||a||'#KR1'; riot_b text:='검증-'||b||'#KR1'; riot_c text:='검증-'||c||'#KR1'; alias_a text:='부계-'||a||'#KR1';
   sa uuid; sb uuid; sc uuid; sd uuid; blocked boolean; mid bigint; mpid bigint; result record;
 begin
   insert into auth.users(id) values(a),(b),(c),(d);
   insert into public.member_sheet(real_name,birth_date,lol_nickname) values(name_a,'2000-01-01',riot_a) returning id into sa;
   insert into public.member_sheet(real_name,birth_date,lol_nickname) values(name_a,'2001-01-01',riot_b) returning id into sb;
   insert into public.profiles(user_id,username,real_name,birth_date,lol_nickname,main_position,initial_internal_score)
-    values(a,a::text,name_a,'2000-01-01',riot_a,'TOP',32),(b,b::text,name_a,'2001-01-01',riot_b,'MID',0);
+    values(a,a::text,name_a,'2000-01-01',lower(riot_a),'TOP',32),(b,b::text,name_a,'2001-01-01',riot_b,'MID',0);
+  if not exists(select 1 from public.profiles where user_id=a and member_sheet_id=sa and lol_nickname=lower(riot_a)) then
+    raise exception 'Case-insensitive signup did not claim the roster entry or preserve input spelling';
+  end if;
+  blocked:=false;
+  begin
+    insert into public.member_sheet(real_name,birth_date,lol_nickname) values(name_a,'2000-01-01',lower(riot_a));
+  exception when unique_violation then blocked:=true; end;
+  if not blocked then raise exception 'Case-only duplicate roster entry was accepted'; end if;
+  blocked:=false;
+  begin
+    update public.member_sheet set birth_date='2000-01-01',lol_nickname=upper(riot_a) where id=sb;
+  exception when unique_violation then blocked:=true; end;
+  if not blocked then raise exception 'Case-only duplicate roster update was accepted'; end if;
   if exists(select 1 from public.player_ratings where user_id=a and
       (overall_rating<>1320 or top_rating<>1320 or jungle_rating<>1320 or mid_rating<>1320 or adc_rating<>1320 or support_rating<>1320)) then
     raise exception 'Score 32 did not initialize all six ratings to 1320';

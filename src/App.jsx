@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
+import { startQueuePolling } from './lib/queuePolling'
 import AdminPage from './components/AdminPage'
 import MemberSheetPage from './components/MemberSheetPage'
 import ProfileAliases, { AliasNames } from './components/ProfileAliases'
 import MostChampions from './components/MostChampions'
-import MatchScreenshotPreview from './components/MatchScreenshotPreview'
+
 import MatchReplayReview from './components/MatchReplayReview'
 import MatchHistoryTeams from './components/MatchHistoryTeams'
 import { apiRequest, authenticatedFetch } from './lib/api'
@@ -39,6 +40,8 @@ const [queueData, setQueueData] = useState(null)
 const [queueLoading, setQueueLoading] = useState(false)
 const [matchCancelling, setMatchCancelling] = useState(false)
 const activeMatchId = queueData?.active_match?.id
+const isQueued = Boolean(queueData?.queue || queueData?.queued)
+const notifiedMatchId = useRef(null)
 const [queueError, setQueueError] = useState('')
 const [queuePrimary, setQueuePrimary] = useState('')
 const [queueSecondary, setQueueSecondary] = useState('')
@@ -209,6 +212,7 @@ const manageLeague = async (method, leagueId) => {
     localStorage.removeItem('lolex_refresh_token')
     localStorage.removeItem('lolex_user')
 
+    setQueueData(null)
     setUser(null)
     setUsername('')
     setPassword('')
@@ -218,6 +222,7 @@ const manageLeague = async (method, leagueId) => {
   }
   useEffect(() => {
     const handleExpiredSession = () => {
+      setQueueData(null)
       setUser(null)
       setPage('login')
       setProfileData(null)
@@ -391,18 +396,30 @@ if (data.active_match?.status === 'position_discussion') {
   }
 }
 useEffect(() => {
-  if (page !== 'queue') {
-    return
-  }
+  if (!user) { notifiedMatchId.current = null; return }
+  if (!activeMatchId || notifiedMatchId.current === activeMatchId) return
+  notifiedMatchId.current = activeMatchId
+  setPage('match')
+  alert(queueData.active_match.status === 'position_discussion'
+    ? '10명이 모였습니다!\n포지션 협의가 필요합니다.'
+    : '10명이 모였습니다!\n매칭이 완료되었습니다.')
+}, [user, activeMatchId, queueData?.active_match?.status])
 
-  const interval = setInterval(() => {
-    openQueue()
-  }, 20000)
-
+useEffect(() => {
+  if (!user || queueLoading || activeMatchId || (page !== 'queue' && !isQueued)) return
+  const polling = startQueuePolling({
+    load: signal => apiRequest('lolex-queue', { signal }),
+    onData: data => { setQueueData(data); setQueueError('') },
+  })
+  const refreshVisible = () => { if (document.visibilityState === 'visible') polling.refresh() }
+  window.addEventListener('focus', polling.refresh)
+  document.addEventListener('visibilitychange', refreshVisible)
   return () => {
-    clearInterval(interval)
+    polling.stop()
+    window.removeEventListener('focus', polling.refresh)
+    document.removeEventListener('visibilitychange', refreshVisible)
   }
-}, [page])
+}, [user, page, isQueued, activeMatchId, queueLoading])
 // Other participants also leave the match screen once this match is cancelled.
 // Do not call openQueue here: it changes pages and would discard review drafts.
 useEffect(() => {
@@ -480,13 +497,6 @@ const joinQueue = async () => {
         '매칭 신청에 실패했습니다.'
       )
     }
-if (data.matched) {
-  if (data.status === 'position_discussion') {
-    alert('10명이 모였습니다!\n포지션 협의가 필요합니다.')
-  } else if (data.status === 'matched') {
-    alert('10명이 모였습니다!\n매칭이 완료되었습니다.')
-  }
-}
     setQueueData(data)
     await openQueue()
     if (data.matchmaking?.success === false) {
@@ -569,92 +579,6 @@ const cancelActiveMatch = async () => {
     setQueueError(err.message || '매칭 취소에 실패했습니다. 다시 시도해주세요.')
   } finally {
     setMatchCancelling(false)
-  }
-}
-const confirmMatchResult = async ({ winner, seriesOutcome, games }) => {
-  const accessToken =
-    localStorage.getItem('lolex_access_token')
-
-  if (!accessToken) {
-    handleLogout()
-    return
-  }
-
-  const matchId = queueData?.active_match?.id
-
-  if (!matchId) {
-    setQueueError('경기 정보를 찾을 수 없습니다.')
-    return
-  }
-
-  const winnerText =
-    winner === 'BLUE' ? 'BLUE TEAM' : 'RED TEAM'
-
-  const confirmed = window.confirm(
-    `${winnerText}의 승리로 확정하시겠습니까?\n확정 후에는 레이팅이 반영됩니다.`
-  )
-
-  if (!confirmed) {
-    return
-  }
-
-  setQueueLoading(true)
-  setQueueError('')
-
-  try {
-    const response = await authenticatedFetch(
-      `${supabaseUrl}/functions/v1/lolex-match-result`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          apikey: supabaseKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          match_id: matchId,
-          winner,
-          capture_outcome: seriesOutcome,
-          capture_uploader_team: games[0]?.uploaderTeam,
-          capture_games: games.map(({ gameNumber, outcome, uploaderTeam, rows }) => ({
-            game_number: gameNumber,
-            outcome,
-            uploader_team: uploaderTeam,
-            kda: rows.map(({ kills, deaths, assists, riotName }) => ({
-              kills,
-              deaths,
-              assists,
-              riotName,
-            })),
-          })),
-        }),
-      }
-    )
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      if (response.status === 404 || data.code === 'MATCH_NOT_FOUND') {
-        setQueueData(null)
-        await openQueue()
-      }
-      throw new Error(
-        data.error || '경기 결과 확정에 실패했습니다.'
-      )
-    }
-
-    alert(`${winnerText} 승리로 확정되었습니다.`)
-
-    await openMatchHistory()
-  } catch (err) {
-    console.error(err)
-
-    setQueueError(
-      err.message ||
-      '경기 결과 확정 중 오류가 발생했습니다.'
-    )
-  } finally {
-    setQueueLoading(false)
   }
 }
 const openLeague = async () => {
@@ -1117,10 +1041,7 @@ const confirmPositionAssignments = async () => {
   {queueData?.active_match?.status !== 'position_discussion' && (
   <div className="match-result-admin">
     <MatchReplayReview key={queueData?.active_match?.id} matchId={queueData?.active_match?.id} players={queueData?.match_players || []} onSaved={openMatchHistory} />
-    <details className="replay-fallback"><summary>캡처로 등록하기 (보조 기능)</summary>
-    <MatchScreenshotPreview onConfirm={confirmMatchResult} busy={queueLoading} />
-    </details>
-    <p>경기 결과 확정</p>
+
 
   </div>
 )}
@@ -2077,7 +1998,7 @@ const confirmPositionAssignments = async () => {
   }
 
   if (page === 'signup') {
-    return (<div className="app"><main className="login-page"><section className="login-card"><div className="brand"><div className="brand-mark">L</div><div><h1>LOLEX</h1><p>League of Legends Community</p></div></div><div className="login-title"><h2>회원가입</h2><p>닉네임은 닉네임#해시태그 형식으로 입력해주세요.</p></div><form className="login-form" onSubmit={handleSignup}>{[['username','아이디','text'],['password','비밀번호','password'],['real_name','성명','text'],['birth_date','생년월일','date'],['lol_nickname','LoL 닉네임#해시태그','text']].map(([key,label,type]) => <label key={key}>{label}<input required type={type} value={signup[key]} onChange={(e)=>setSignup({...signup,[key]:e.target.value})} /></label>)}<label>내전 점수 (기존 멤버만 해당)<input type="number" min="0" max="50" step="1" placeholder="내전 점수를 입력해주세요. (기존 멤버만 해당 됩니다.)" value={signup.initial_internal_score} onChange={e => setSignup({ ...signup, initial_internal_score: e.target.value })} /><small>미입력·0점은 1000점이며, 1~50점은 모든 포지션에 동일하게 반영됩니다.</small><small>시작 레이팅: {Number.isInteger(Number(signup.initial_internal_score)) && Number(signup.initial_internal_score) >= 0 && Number(signup.initial_internal_score) <= 50 ? 1000 + Number(signup.initial_internal_score) * 10 : '점수를 확인해주세요'}</small></label><label>주 포지션<select value={signup.main_position} onChange={(e)=>setSignup({...signup,main_position:e.target.value})}>{['TOP','JUNGLE','MID','ADC','SUPPORT'].map((p)=><option key={p}>{p}</option>)}</select></label><label>부 포지션<select value={signup.sub_position} onChange={(e)=>setSignup({...signup,sub_position:e.target.value})}><option value="">없음</option>{['TOP','JUNGLE','MID','ADC','SUPPORT'].map((p)=><option key={p}>{p}</option>)}</select></label>{signupError && <div className="login-error">{signupError}</div>}<button className="login-button" disabled={signupLoading}>{signupLoading ? '가입 처리 중...' : '회원가입'}</button></form><div className="login-footer"><button type="button" className="signup-button" onClick={()=>setPage('login')}>로그인으로 돌아가기</button></div></section></main></div>)
+    return (<div className="app"><main className="login-page"><section className="login-card"><div className="brand"><div className="brand-mark">L</div><div><h1>LOLEX</h1><p>League of Legends Community</p></div></div><div className="login-title"><h2>회원가입</h2><p>닉네임은 닉네임#해시태그 형식으로 입력해주세요. 대소문자는 구분하지 않습니다.</p></div><form className="login-form" onSubmit={handleSignup}>{[['username','아이디','text'],['password','비밀번호','password'],['real_name','성명','text'],['birth_date','생년월일','date'],['lol_nickname','LoL 닉네임#해시태그','text']].map(([key,label,type]) => <label key={key}>{label}<input required type={type} value={signup[key]} onChange={(e)=>setSignup({...signup,[key]:e.target.value})} /></label>)}<label>내전 점수 (기존 멤버만 해당)<input type="number" min="0" max="50" step="1" placeholder="내전 점수를 입력해주세요. (기존 멤버만 해당 됩니다.)" value={signup.initial_internal_score} onChange={e => setSignup({ ...signup, initial_internal_score: e.target.value })} /><small>미입력·0점은 1000점이며, 1~50점은 모든 포지션에 동일하게 반영됩니다.</small><small>시작 레이팅: {Number.isInteger(Number(signup.initial_internal_score)) && Number(signup.initial_internal_score) >= 0 && Number(signup.initial_internal_score) <= 50 ? 1000 + Number(signup.initial_internal_score) * 10 : '점수를 확인해주세요'}</small></label><label>주 포지션<select value={signup.main_position} onChange={(e)=>setSignup({...signup,main_position:e.target.value})}>{['TOP','JUNGLE','MID','ADC','SUPPORT'].map((p)=><option key={p}>{p}</option>)}</select></label><label>부 포지션<select value={signup.sub_position} onChange={(e)=>setSignup({...signup,sub_position:e.target.value})}><option value="">없음</option>{['TOP','JUNGLE','MID','ADC','SUPPORT'].map((p)=><option key={p}>{p}</option>)}</select></label>{signupError && <div className="login-error">{signupError}</div>}<button className="login-button" disabled={signupLoading}>{signupLoading ? '가입 처리 중...' : '회원가입'}</button></form><div className="login-footer"><button type="button" className="signup-button" onClick={()=>setPage('login')}>로그인으로 돌아가기</button></div></section></main></div>)
   }
 
   return (

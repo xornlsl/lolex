@@ -41,15 +41,6 @@ begin
   -- participant reassignment, ratings, and set statistics together.
   result := public.finish_match_series_with_players(p_match_id,p_winner,'BLUE',p_games,p_players);
   if not coalesce((result->>'success')::boolean,false) then raise exception 'SERIES_REJECTED: %',result->>'message'; end if;
-  if exists(
-    select 1 from public.match_players mp
-    join jsonb_array_elements(p_games->0->'kda') r on (r->>'user_id')::uuid=mp.user_id
-    where mp.match_id=p_match_id and mp.position is distinct from r->>'position'
-  ) or exists(
-    select 1 from public.match_players mp
-    join jsonb_array_elements(p_games->1->'kda') r on (r->>'user_id')::uuid=mp.user_id
-    where mp.match_id=p_match_id and mp.position is distinct from r->>'position'
-  ) then raise exception 'REPLACEMENT_POSITION_MISMATCH'; end if;
   for g in select value from jsonb_array_elements(p_games) loop
     insert into public.replay_games(match_id,game_number,file_hash,winner,patch)
     values(p_match_id,(g->>'game_number')::integer,g->>'hash',g->>'winner',g->>'patch') returning id into gid;
@@ -91,3 +82,5 @@ select r.user_id,r.champion_key,r.champion_name,
   r.games,r.wins,r.games-r.wins,r.avg_kills,r.avg_deaths,r.avg_assists,r.kda,round(r.wins::numeric/r.games*100)
 from ranked r where rank<=3 order by r.user_id,rank;
 $$;
+
+;

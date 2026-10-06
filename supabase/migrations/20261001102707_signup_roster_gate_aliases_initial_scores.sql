@@ -111,3 +111,5 @@ begin
 end;
 $$;
 revoke all on function public.check_alias_owner(), public.enforce_member_signup(), public.prevent_duplicate_member_approval() from public,anon,authenticated;
+
+;

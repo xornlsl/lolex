@@ -29,4 +29,4 @@ end $$;
 revoke all on function public.apply_test_match_roster() from public, anon, authenticated;
 create trigger apply_requested_test_roster after update of status on public.matches
 for each row execute function public.apply_test_match_roster();
-
+;

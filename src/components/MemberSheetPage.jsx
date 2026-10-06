@@ -78,7 +78,7 @@ export default function MemberSheetPage({ onBack }) {
       <form className="login-form sheet-form" onSubmit={saveEntry}>
         <label>성명<input required maxLength={80} autoComplete="off" value={form.real_name} onChange={e => setForm({ ...form, real_name: e.target.value })} /></label>
         <label>생년월일<input required type="date" value={form.birth_date} onChange={e => setForm({ ...form, birth_date: e.target.value })} /></label>
-        <label>롤 닉네임#해시태그<input required maxLength={100} placeholder="야 호#메아리" autoComplete="off" value={form.lol_nickname} onChange={e => setForm({ ...form, lol_nickname: e.target.value })} /></label>
+        <label>롤 닉네임#해시태그<small>닉네임과 해시태그는 대소문자를 구분하지 않습니다.</small><input required maxLength={100} placeholder="야 호#메아리" autoComplete="off" value={form.lol_nickname} onChange={e => setForm({ ...form, lol_nickname: e.target.value })} /></label>
         <div className="sheet-actions">
           <button type="submit" className="login-button" disabled={saving}>{saving ? '저장 중...' : editingId ? '수정 저장' : '명단 등록'}</button>
           {editingId && <button type="button" className="signup-button" disabled={saving} onClick={() => { setEditingId(null); setForm(blankEntry); setMessage('') }}>취소</button>}

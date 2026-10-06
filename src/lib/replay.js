@@ -5,7 +5,7 @@ export function parseReplay(buffer) {
   const view = new DataView(buffer)
   const decode = data => new TextDecoder('utf-8', { fatal: true }).decode(data)
   if (bytes.length < 300 || decode(bytes.slice(0, 4)) !== 'RIOT') throw new Error('올바른 리플레이 파일이 아닙니다.')
-  if (view.getUint16(4, true) !== 2) throw new Error('지원하지 않는 리플레이 버전입니다. 캡처 등록을 이용해주세요.')
+  if (view.getUint16(4, true) !== 2) throw new Error('지원하지 않는 리플레이 버전입니다. 게임 ID 조회를 이용해주세요.')
   const headerEnd = 15 + bytes[14]
   const length = view.getUint32(bytes.length - 4, true)
   const start = bytes.length - 4 - length
@@ -14,8 +14,8 @@ export function parseReplay(buffer) {
   try {
     metadata = JSON.parse(decode(bytes.slice(start, bytes.length - 4)))
     stats = JSON.parse(metadata.statsJson || '[]')
-  } catch { throw new Error('리플레이 통계를 읽지 못했습니다. 캡처 등록을 이용해주세요.') }
-  if (!Array.isArray(stats) || stats.length !== 10) throw new Error('이 파일에는 10명의 종료 통계가 없습니다. 캡처 등록을 이용해주세요.')
+  } catch { throw new Error('리플레이 통계를 읽지 못했습니다. 게임 ID 조회를 이용해주세요.') }
+  if (!Array.isArray(stats) || stats.length !== 10) throw new Error('이 파일에는 10명의 종료 통계가 없습니다. 게임 ID 조회를 이용해주세요.')
   const number = value => value !== '' && value != null && Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) <= 999 ? Number(value) : ''
   const rows = stats.map(p => ({
     riotName: p.RIOT_ID_GAME_NAME ? `${p.RIOT_ID_GAME_NAME}${p.RIOT_ID_TAG_LINE ? '#' + p.RIOT_ID_TAG_LINE : ''}` : (p.NAME || ''),

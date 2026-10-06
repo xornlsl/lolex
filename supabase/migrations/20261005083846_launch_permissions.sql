@@ -17,3 +17,4 @@ begin
     execute format('create policy "Approved membership required" on public.%I as restrictive for select to authenticated using (exists (select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.status=''approved''))',tbl);
   end loop;
 end $$;
+;

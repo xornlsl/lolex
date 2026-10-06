@@ -42,3 +42,5 @@ language sql stable security definer set search_path='' as $$
 $$;
 revoke all on function public.get_most_champions(uuid[]) from public,anon,authenticated;
 grant execute on function public.get_most_champions(uuid[]) to service_role;
+
+;

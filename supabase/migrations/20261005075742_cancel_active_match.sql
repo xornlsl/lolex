@@ -37,3 +37,5 @@ end;
 $$;
 revoke all on function public.cancel_active_match(bigint,uuid) from public,anon,authenticated;
 grant execute on function public.cancel_active_match(bigint,uuid) to service_role;
+
+;

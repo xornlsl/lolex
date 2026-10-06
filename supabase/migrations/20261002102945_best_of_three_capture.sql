@@ -71,3 +71,5 @@ end;
 $$;
 revoke all on function public.finish_match_series_from_capture(bigint,text,text,jsonb) from public,anon,authenticated;
 grant execute on function public.finish_match_series_from_capture(bigint,text,text,jsonb) to service_role;
+
+;
