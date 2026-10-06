@@ -1808,8 +1808,38 @@ input, textarea, select { background:rgba(7,16,45,.72); border:1px solid rgba(12
 .champion-stat-row > div { display: grid; gap: 7px; }
 .champion-stat-row small { font-size: 12px; color: #514879; }
 .champion-identity img { width: 48px; height: 48px; border: 1px solid #d9a25b; border-radius: 10px; }
-.admin-member-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.admin-member-row p { margin: 7px 0; overflow-wrap: anywhere; }
+.admin-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.app .admin-section-heading h2 { margin: 0; }
+.admin-member-count { flex-shrink: 0; padding: 6px 12px; border: 1px solid #d6c9e8; border-radius: 20px; background: #f1eafa; color: #5b467e; font-size: 13px; font-weight: 700; }
+.admin-member-list { display: grid; gap: 14px; }
+.admin-member-card { display: grid; grid-template-columns: minmax(150px, .8fr) minmax(0, 2fr); align-items: center; gap: 20px 28px; padding: 24px; border: 1px solid #d6c9e8; border-radius: 18px; background: linear-gradient(120deg, #ffffffed, #f7f3ffdc); box-shadow: 0 3px 12px #38205b06; }
+.admin-member-identity { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.admin-member-avatar { display: grid; place-items: center; flex: 0 0 46px; height: 46px; border: 1px solid #d6b67b; border-radius: 15px; background: linear-gradient(145deg, #fff4d8, #e8ddfa); color: #594280; font-size: 19px; font-weight: 800; }
+.admin-member-name { min-width: 0; overflow-wrap: anywhere; }
+.admin-member-name > strong { font-size: 17px; }
+.admin-member-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.admin-role, .admin-self { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; line-height: 1.4; }
+.admin-role-member { background: #eeedf8; color: #5c557e; }
+.admin-role-staff { background: #e9dffa; color: #63428a; }
+.admin-role-superadmin { background: #fff0ca; color: #815615; }
+.admin-self { background: #e5edf9; color: #3e5b89; }
+.admin-member-details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 24px; margin: 0; padding-left: 28px; border-left: 1px solid #e1d8ee; }
+.admin-member-details .admin-member-riot { grid-column: 1 / -1; }
+.admin-member-details dt { color: #776d91; font-size: 12px; margin-bottom: 5px; }
+.admin-member-details dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; color: #302663; }
+.admin-member-riot dd { font-weight: 700; font-size: 16px; }
+.admin-member-actions:not(:empty) { grid-column: 1 / -1; justify-content: flex-end; padding-top: 16px; border-top: 1px solid #e7deef; }
+.admin-member-actions:empty { display: none; }
+.app .admin-member-actions button { min-height: 40px; padding: 8px 16px; font-size: 13px; border-radius: 10px; box-shadow: none; }
+.app .admin-member-actions .queue-cancel-button { border: 1px solid #e8aebb; background: #fff4f6; color: #ae3852; }
+.app .admin-member-actions .queue-cancel-button:hover:not(:disabled) { background: #ffe7ed; }
+.admin-member-actions button:focus-visible { outline: 3px solid #7761bc; outline-offset: 3px; }
+.admin-members-empty { padding: 24px; text-align: center; color: #776d91; border: 1px dashed #d6c9e8; border-radius: 14px; }
+@media (max-width: 600px) {
+  .admin-member-card { grid-template-columns: minmax(0, 1fr); padding: 18px; gap: 18px; }
+  .admin-member-details { padding: 16px 0 0; border-left: 0; border-top: 1px solid #e1d8ee; }
+  .admin-member-actions:not(:empty) { justify-content: flex-start; }
+}
 .match-screenshot-panel { padding: 20px; border: 1px solid rgba(234,190,111,.8); border-radius: 16px; background: rgba(244,238,255,.82); color: #1c2259; }
 .match-screenshot-panel h3, .match-screenshot-panel p, .match-screenshot-panel span, .match-screenshot-panel strong { color: #1c2259; text-shadow: none; }
 .match-screenshot-panel h3 { margin: 0 0 8px; }
@@ -1851,7 +1881,7 @@ input, textarea, select { background:rgba(7,16,45,.72); border:1px solid rgba(12
   .match-kda-review-row { grid-template-columns: 24px minmax(0,1fr) 92px; }
   .match-kda-review-row small { grid-column: 2 / -1; }
   .match-screenshot-rows { grid-template-columns: 1fr; }
-  .sheet-summary, .admin-member-row { align-items: flex-start; flex-direction: column; }
+  .sheet-summary { align-items: flex-start; flex-direction: column; }
   .sheet-total { text-align: left; }
   .sheet-form { grid-template-columns: 1fr; }
 }
