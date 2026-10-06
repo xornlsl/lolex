@@ -540,6 +540,7 @@ const leaveQueue = async () => {
     setQueueData(data)
     setQueuePrimary('')
     setQueueSecondary('')
+    await openQueue()
   } catch (err) {
     console.error(err)
 
@@ -1242,6 +1243,19 @@ const confirmPositionAssignments = async () => {
   <span>현재 대기 인원</span>
   <strong>{queueData?.queue_count ?? 0} / 10명</strong>
 </div>
+<section className="queue-roster" aria-label="매칭 신청자 명단">
+  <div className="queue-roster-heading"><h3>매칭 신청자</h3><small>점수는 종합 레이팅 기준입니다.</small></div>
+  {Array.isArray(queueData?.queue_members) ? (
+    queueData.queue_members.length ? <div className="queue-roster-scroll"><table>
+      <thead><tr><th scope="col">이름</th><th scope="col">닉네임</th><th scope="col">주 포지션</th><th scope="col">부 포지션</th><th scope="col">점수</th></tr></thead>
+      <tbody>{queueData.queue_members.map(member => <tr key={member.user_id}>
+        <td>{member.real_name}{member.user_id === (user.id || user.user_id) && <small className="queue-roster-self">나</small>}</td>
+        <td>{member.lol_nickname}</td><td>{member.primary_position}</td><td>{member.secondary_position || '없음'}</td>
+        <td>{member.overall_rating == null ? '—' : Number(member.overall_rating).toLocaleString('ko-KR')}</td>
+      </tr>)}</tbody>
+    </table></div> : <p className="queue-roster-empty">아직 매칭 신청자가 없습니다. 첫 번째로 참여해보세요.</p>
+  ) : <p className="queue-roster-empty">신청자 명단을 불러오지 못했습니다. 잠시 후 다시 확인해주세요.</p>}
+</section>
 {queueData?.active_match?.status === 'matched' && (
   <div className="queue-guide">
     <span>매칭 상태</span>

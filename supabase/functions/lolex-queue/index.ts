@@ -73,15 +73,11 @@ export default {
     );
   }
 
-  const { count: queueCount, error: countError } =
+  const { data: waiting, error: countError } =
     await ctx.supabaseAdmin
       .from("match_queue")
-      .select("*", { count: "exact", head: true });
-      console.log("QUEUE COUNT:", queueCount);
-    
-  await ctx.supabaseAdmin
-    .from("match_queue")
-    .select("*", { count: "exact", head: true });
+      .select("user_id, primary_position, secondary_position, joined_at")
+      .order("joined_at").order("id");
 
 
   if (countError) {
@@ -91,6 +87,23 @@ export default {
       { error: "매칭 대기 인원을 확인하지 못했습니다." },
       { status: 500 }
     );
+  }
+  const queueMembers = [];
+  if (waiting?.length) {
+    const ids = waiting.map(row => row.user_id);
+    const [names, ratings] = await Promise.all([
+      ctx.supabaseAdmin.from("profiles").select("user_id, real_name, lol_nickname").in("user_id", ids),
+      ctx.supabaseAdmin.from("player_ratings").select("user_id, overall_rating").in("user_id", ids),
+    ]);
+    if (names.error || ratings.error) return Response.json({ error: "매칭 신청자 정보를 확인하지 못했습니다." }, { status: 500 });
+    const nameMap = new Map((names.data ?? []).map(row => [row.user_id, row]));
+    const ratingMap = new Map((ratings.data ?? []).map(row => [row.user_id, row.overall_rating]));
+    for (const row of waiting) queueMembers.push({
+      ...row,
+      real_name: nameMap.get(row.user_id)?.real_name ?? "—",
+      lol_nickname: nameMap.get(row.user_id)?.lol_nickname ?? "—",
+      overall_rating: ratingMap.get(row.user_id) ?? null,
+    });
   }
 const { data: activeMatchPlayer, error: activeMatchError } =
   await ctx.supabaseAdmin
@@ -176,7 +189,8 @@ if (matchPlayers.length > 0) {
       success: true,
       queued: Boolean(queue),
       queue: queue ?? null,
-      queue_count: queueCount ?? 0,
+      queue_count: waiting?.length ?? 0,
+      queue_members: queueMembers,
       active_match: activeMatchPlayer?.matches ?? null,
       match_players: matchPlayers,
     },
