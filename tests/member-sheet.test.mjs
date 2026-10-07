@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { canManageSheet, validateSheetEntry, parseInitialScore, validateRiotId } from '../supabase/functions/_shared/member-sheet-validation.js'
+import { initialRatingFromScore } from '../src/lib/rating.js'
 
 const entry = { real_name: '홍길동', birth_date: '2000-02-29', lol_nickname: '야 호#메아리' }
 test('validates leap days and preserves spaces inside Riot IDs', () => {
@@ -27,8 +28,8 @@ test('only approved STAFF and SUPERADMIN can access the roster', () => {
 
 test('initial rating accepts only blank or integer scores 0 through 50', () => {
   for (const value of ['', undefined, null, 0, '0']) assert.equal(parseInitialScore(value), 0)
-  assert.equal(1000 + parseInitialScore('32') * 10, 1320)
-  assert.equal(1000 + parseInitialScore(50) * 10, 1500)
+  assert.equal(initialRatingFromScore(parseInitialScore('32')), 1800)
+  assert.equal(initialRatingFromScore(parseInitialScore(50)), 2000)
   for (const value of [-1, '-1', 51, '51', 1.5, '1.5', true, [], {}, '1e1', ' ']) {
     assert.throws(() => parseInitialScore(value))
   }

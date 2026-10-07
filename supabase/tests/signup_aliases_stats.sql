@@ -26,8 +26,8 @@ begin
   exception when unique_violation then blocked:=true; end;
   if not blocked then raise exception 'Case-only duplicate roster update was accepted'; end if;
   if exists(select 1 from public.player_ratings where user_id=a and
-      (overall_rating<>1320 or top_rating<>1320 or jungle_rating<>1320 or mid_rating<>1320 or adc_rating<>1320 or support_rating<>1320)) then
-    raise exception 'Score 32 did not initialize all six ratings to 1320';
+      (overall_rating<>1800 or top_rating<>1800 or jungle_rating<>1800 or mid_rating<>1800 or adc_rating<>1800 or support_rating<>1800)) then
+    raise exception 'Score 32 did not initialize all six ratings to 1800';
   end if;
   if not exists(select 1 from public.player_ratings where user_id=b and overall_rating=1000 and support_rating=1000) then raise exception 'Score zero failed'; end if;
 
@@ -65,7 +65,7 @@ begin
   update public.member_sheet set lol_nickname=riot_c where id=sc;
   insert into public.profiles(user_id,username,real_name,birth_date,lol_nickname,main_position,initial_internal_score)
     values(c,c::text,name_c,'2000-01-01',riot_c,'TOP',50);
-  if not exists(select 1 from public.player_ratings where user_id=c and overall_rating=1500 and top_rating=1500 and jungle_rating=1500 and mid_rating=1500 and adc_rating=1500 and support_rating=1500) then raise exception 'Score 50 failed'; end if;
+  if not exists(select 1 from public.player_ratings where user_id=c and overall_rating=2000 and top_rating=2000 and jungle_rating=2000 and mid_rating=2000 and adc_rating=2000 and support_rating=2000) then raise exception 'Score 50 failed'; end if;
   insert into public.member_sheet(real_name,birth_date,lol_nickname) values(name_d,'2000-01-01',d::text||'#KR1') returning id into sd;
   blocked:=false;
   begin insert into public.profiles(user_id,username,real_name,birth_date,lol_nickname,main_position,initial_internal_score)

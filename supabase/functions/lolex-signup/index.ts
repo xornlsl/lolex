@@ -1,5 +1,6 @@
 import { withSupabase } from "jsr:@supabase/server@^1";
 import { validateSheetEntry, parseInitialScore } from "../_shared/member-sheet-validation.js";
+import { initialRatingFromScore } from "../../../src/lib/rating.js";
 
 const POSITIONS = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
 const publicErrors = [
@@ -62,7 +63,7 @@ export default {
           : insertError.code === "23505" ? "이미 가입 신청된 정보 또는 사용 중인 아이디입니다." : "회원정보 저장에 실패했습니다.";
         return Response.json({ error: message }, { status: insertError.code === "P0001" || insertError.code === "23505" ? 409 : 500 });
       }
-      return Response.json({ success: true, status: "pending", initial_rating: 1000 + score * 10 }, { status: 201 });
+      return Response.json({ success: true, status: "pending", initial_rating: initialRatingFromScore(score) }, { status: 201 });
     } catch (error) {
       console.error("Signup failed", error?.code || "unknown");
       return Response.json({ error: "회원가입 처리 중 오류가 발생했습니다." }, { status: 500 });
