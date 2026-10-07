@@ -202,7 +202,9 @@ if (matchPlayers.length > 0) {
           const body = await req.json();
 
           const primaryPosition = body.primary_position;
-          const secondaryPosition = body.secondary_position;
+          // ALL은 모든 포지션에 배정될 수 있어 부 포지션을 사용하지 않는다.
+          // 기존 DB 열은 값이 필요하므로 저장 시에만 무시되는 유효 포지션으로 정규화한다.
+          const secondaryPosition = primaryPosition === "ALL" ? "TOP" : body.secondary_position;
 
           // 포지션 유효성 확인
           if (

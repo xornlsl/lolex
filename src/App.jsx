@@ -383,7 +383,7 @@ if (data.active_match?.status === 'position_discussion') {
 
     if (data.queue) {
       setQueuePrimary(data.queue.primary_position || '')
-      setQueueSecondary(data.queue.secondary_position || '')
+      setQueueSecondary(data.queue.primary_position === 'ALL' ? '' : data.queue.secondary_position || '')
     }
   } catch (err) {
     console.error(err)
@@ -451,12 +451,12 @@ useEffect(() => {
   return () => { controller.abort(); clearTimeout(timer) }
 }, [page, activeMatchId, matchCancelling, queueLoading])
 const joinQueue = async () => {
-  if (!queuePrimary || !queueSecondary) {
+  if (!queuePrimary || (queuePrimary !== 'ALL' && !queueSecondary)) {
     setQueueError('주 포지션과 부 포지션을 모두 선택해주세요.')
     return
   }
 
-  if (queuePrimary === queueSecondary) {
+  if (queuePrimary !== 'ALL' && queuePrimary === queueSecondary) {
     setQueueError('주 포지션과 부 포지션은 서로 다르게 선택해주세요.')
     return
   }
@@ -896,7 +896,7 @@ const confirmPositionAssignments = async () => {
     </span>
 
     <span>
-      부 포지션: {player.requested_secondary_position}
+      부 포지션: {player.requested_primary_position === 'ALL' ? '없음' : player.requested_secondary_position}
     </span>
   </div>
 
@@ -1113,9 +1113,11 @@ const confirmPositionAssignments = async () => {
                     <select
                       id="queue-primary"
                       value={queuePrimary}
-                      onChange={(e) =>
-                        setQueuePrimary(e.target.value)
-                      }
+                      onChange={(e) => {
+                        const position = e.target.value
+                        setQueuePrimary(position)
+                        if (position === 'ALL') setQueueSecondary('')
+                      }}
                     >
                       <option value="">
                         주 포지션 선택
@@ -1137,12 +1139,13 @@ const confirmPositionAssignments = async () => {
                     <select
                       id="queue-secondary"
                       value={queueSecondary}
+                      disabled={queuePrimary === 'ALL'}
                       onChange={(e) =>
                         setQueueSecondary(e.target.value)
                       }
                     >
                       <option value="">
-                        부 포지션 선택
+                        {queuePrimary === 'ALL' ? 'ALL 선택 시 사용하지 않음' : '부 포지션 선택'}
                       </option>
                       <option value="TOP">TOP</option>
                       <option value="JUNGLE">JUNGLE</option>
@@ -1173,7 +1176,7 @@ const confirmPositionAssignments = async () => {
       <thead><tr><th scope="col">이름</th><th scope="col">닉네임</th><th scope="col">주 포지션</th><th scope="col">부 포지션</th><th scope="col">점수</th></tr></thead>
       <tbody>{queueData.queue_members.map(member => <tr key={member.user_id}>
         <td>{member.real_name}{member.user_id === (user.id || user.user_id) && <small className="queue-roster-self">나</small>}</td>
-        <td>{member.lol_nickname}</td><td>{member.primary_position}</td><td>{member.secondary_position || '없음'}</td>
+        <td>{member.lol_nickname}</td><td>{member.primary_position}</td><td>{member.primary_position === 'ALL' ? '없음' : member.secondary_position || '없음'}</td>
         <td>{member.overall_rating == null ? '—' : Number(member.overall_rating).toLocaleString('ko-KR')}</td>
       </tr>)}</tbody>
     </table></div> : <p className="queue-roster-empty">아직 매칭 신청자가 없습니다. 첫 번째로 참여해보세요.</p>
