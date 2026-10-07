@@ -2,6 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "npm:@supabase/server@^1";
 
 const POSITIONS = ["TOP", "JUNGLE", "MID", "ADC", "SUPPORT"];
+const PRIMARY_POSITIONS = ["ALL", ...POSITIONS];
 
 export default {
   fetch: withSupabase(
@@ -205,7 +206,7 @@ if (matchPlayers.length > 0) {
 
           // 포지션 유효성 확인
           if (
-            !POSITIONS.includes(primaryPosition) ||
+            !PRIMARY_POSITIONS.includes(primaryPosition) ||
             !POSITIONS.includes(secondaryPosition)
           ) {
             return Response.json(

@@ -1120,6 +1120,7 @@ const confirmPositionAssignments = async () => {
                       <option value="">
                         주 포지션 선택
                       </option>
+                      <option value="ALL">ALL (모든 포지션)</option>
                       <option value="TOP">TOP</option>
                       <option value="JUNGLE">JUNGLE</option>
                       <option value="MID">MID</option>
