@@ -25,6 +25,10 @@ function App() {
   const [signupLoading, setSignupLoading] = useState(false)
   const [signupError, setSignupError] = useState('')
   const [matchHistory, setMatchHistory] = useState([])
+  const [matchHistoryPage, setMatchHistoryPage] = useState(1)
+  const [matchHistoryPagination, setMatchHistoryPagination] = useState({ page: 1, page_size: 5, total: 0, total_pages: 1 })
+  const [matchHistoryLoading, setMatchHistoryLoading] = useState(false)
+  const [matchHistoryError, setMatchHistoryError] = useState('')
 
   const [profileData, setProfileData] = useState(null)
   const [profileLoading, setProfileLoading] = useState(false)
@@ -89,21 +93,31 @@ const manageLeague = async (method, leagueId) => {
   })
 
 
-  const loadMatchHistory = async () => {
+  const loadMatchHistory = async (requestedPage = 1) => {
     const accessToken = localStorage.getItem('lolex_access_token')
     if (!accessToken) return
+    setMatchHistoryLoading(true)
+    setMatchHistoryError('')
     try {
-      const response = await authenticatedFetch(`${supabaseUrl}/functions/v1/lolex-match-history`)
+      const response = await authenticatedFetch(`${supabaseUrl}/functions/v1/lolex-match-history?page=${requestedPage}&page_size=5`)
       const data = await response.json()
-      if (response.ok && data.success) setMatchHistory(data.matches || [])
-    } catch (err) { console.error(err) }
+      if (!response.ok || !data.success) throw new Error(data.error || '경기 기록을 불러오지 못했습니다.')
+      setMatchHistory(data.matches || [])
+      setMatchHistoryPage(data.pagination?.page || requestedPage)
+      setMatchHistoryPagination(data.pagination || { page: requestedPage, page_size: 5, total: data.matches?.length || 0, total_pages: 1 })
+    } catch (err) {
+      console.error(err)
+      setMatchHistoryError(err.message || '경기 기록을 불러오지 못했습니다.')
+    } finally {
+      setMatchHistoryLoading(false)
+    }
   }
   const openMatchHistory = async () => {
     setPage('history')
-    await loadMatchHistory()
+    await loadMatchHistory(1)
   }
 
-  useEffect(() => { if (user && page === 'home') loadMatchHistory() }, [user, page])
+  useEffect(() => { if (user && page === 'home') loadMatchHistory(1) }, [user, page])
 
   const handleSignup = async (e) => {
     e.preventDefault(); setSignupError(''); setSignupLoading(true)
@@ -814,7 +828,8 @@ const confirmPositionAssignments = async () => {
       <header className="dashboard-header"><h1>최근 경기</h1><button type="button" className="logout-button" onClick={() => setPage('home')}>메인으로</button></header>
       <section className="record-panel match-history-panel">
         <div className="section-title"><p>MATCH HISTORY</p><h2>최근 경기</h2></div>
-        {matchHistory.length === 0 ? <p className="empty-state">최근 경기가 없습니다.</p> : <div className="match-history-list">
+        {matchHistoryError && <p className="empty-state">{matchHistoryError}</p>}
+        {matchHistoryLoading && matchHistory.length === 0 ? <p className="empty-state">경기 기록을 불러오는 중입니다...</p> : matchHistory.length === 0 && !matchHistoryError ? <p className="empty-state">최근 경기가 없습니다.</p> : <div className="match-history-list">
           {matchHistory.map(match => <article className="match-history-item" key={match.id}>
             <div><strong>#{match.id} · {match.winner === 'BLUE' ? '블루팀 승리' : '레드팀 승리'}</strong><small>{new Date(match.finished_at || match.created_at).toLocaleString('ko-KR')}</small></div>
             {match.games?.length ? match.games.map(game => <details className="history-set" key={game.game_number} open>
@@ -823,6 +838,11 @@ const confirmPositionAssignments = async () => {
             </details>) : <MatchHistoryTeams players={match.players} winner={match.winner} />}
           </article>)}
         </div>}
+        {matchHistoryPagination.total > 0 && <nav className="history-pagination" aria-label="경기 기록 페이지">
+          <button type="button" onClick={() => loadMatchHistory(matchHistoryPage - 1)} disabled={matchHistoryLoading || matchHistoryPage <= 1}>이전</button>
+          <span><strong>{matchHistoryPage}</strong> / {matchHistoryPagination.total_pages} 페이지 · 총 {matchHistoryPagination.total}경기</span>
+          <button type="button" onClick={() => loadMatchHistory(matchHistoryPage + 1)} disabled={matchHistoryLoading || matchHistoryPage >= matchHistoryPagination.total_pages}>다음</button>
+        </nav>}
       </section>
     </main></div>
   }
